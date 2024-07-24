@@ -39,7 +39,7 @@ jobs:
       run: cargo test --verbose
 
     - name: Run benchmarks
-      run: cargo bench -- --save-baseline new
+      run: cargo bench
 
     - name: Generate unique identifier
       id: identifier
@@ -70,7 +70,7 @@ jobs:
     - name: Upload new benchmark results
       run: |
         BRANCH_NAME=$(echo ${{ github.ref }} | sed 's/refs\/heads\///')
-        aws s3 cp target/criterion/new s3://switch-benchs/${BRANCH_NAME}/baseline.bench --region ${{ secrets.AWS_REGION }}
+        aws s3 cp target/criterion/semaphore_benchmark/new s3://switch-benchs/${BRANCH_NAME}/baseline.bench --region ${{ secrets.AWS_REGION }}
 
     - name: Upload HTML reports
       run: |
