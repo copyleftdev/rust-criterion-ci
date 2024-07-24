@@ -12,7 +12,7 @@ impl MySemaphore {
         }
     }
 
-    pub async fn acquire(&self) -> tokio::sync::OwnedSemaphorePermit {
-        self.semaphore.clone().acquire_owned().await.unwrap()
+    pub async fn acquire(&self) -> Result<tokio::sync::OwnedSemaphorePermit, tokio::sync::AcquireError> {
+        self.semaphore.clone().acquire_owned().await
     }
 }
