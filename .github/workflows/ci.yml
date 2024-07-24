@@ -45,10 +45,16 @@ jobs:
       id: identifier
       run: echo "COMMIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
+    - name: Configure AWS CLI
+      run: |
+        aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws configure set region ${{ secrets.AWS_REGION }}
+
     - name: Download previous benchmark results
       run: |
         BRANCH_NAME=$(echo ${{ github.ref }} | sed 's/refs\/heads\///')
-        aws s3 cp s3://switch-benchs/${BRANCH_NAME}/baseline.bench baseline.bench --region us-east-1 || echo "No previous baseline found"
+        aws s3 cp s3://switch-benchs/${BRANCH_NAME}/baseline.bench baseline.bench --region ${{ secrets.AWS_REGION }} || echo "No previous baseline found"
 
     - name: Compare benchmarks
       run: |
@@ -64,9 +70,9 @@ jobs:
     - name: Upload new benchmark results
       run: |
         BRANCH_NAME=$(echo ${{ github.ref }} | sed 's/refs\/heads\///')
-        aws s3 cp new.bench s3://switch-benchs/${BRANCH_NAME}/baseline.bench --region us-east-1
+        aws s3 cp new.bench s3://switch-benchs/${BRANCH_NAME}/baseline.bench --region ${{ secrets.AWS_REGION }}
 
     - name: Upload HTML reports
       run: |
         BRANCH_NAME=$(echo ${{ github.ref }} | sed 's/refs\/heads\///')
-        aws s3 sync target/criterion s3://switch-benchs/${BRANCH_NAME}/reports --region us-east-1 --acl public-read
+        aws s3 sync target/criterion s3://switch-benchs/${BRANCH_NAME}/reports --region ${{ secrets.AWS_REGION }} --acl public-read
