@@ -1,0 +1,72 @@
+name: Rust CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+
+    - name: Cache Cargo registry
+      uses: actions/cache@v2
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-registry-
+
+    - name: Cache Cargo index
+      uses: actions/cache@v2
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-index-
+
+    - name: Build
+      run: cargo build --verbose
+
+    - name: Run tests
+      run: cargo test --verbose
+
+    - name: Run benchmarks
+      run: cargo bench -- --save-baseline new
+
+    - name: Generate unique identifier
+      id: identifier
+      run: echo "COMMIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+    - name: Download previous benchmark results
+      run: |
+        BRANCH_NAME=$(echo ${{ github.ref }} | sed 's/refs\/heads\///')
+        aws s3 cp s3://switch-benchs/${BRANCH_NAME}/baseline.bench baseline.bench --region us-east-1 || echo "No previous baseline found"
+
+    - name: Compare benchmarks
+      run: |
+        if [ -f "baseline.bench" ]; then
+            critcmp baseline.bench new.bench --threshold 5.0
+            if [ $? -ne 0 ]; then
+                echo "Performance regression detected!"
+                exit 1
+            fi
+        fi
+      shell: bash
+
+    - name: Upload new benchmark results
+      run: |
+        BRANCH_NAME=$(echo ${{ github.ref }} | sed 's/refs\/heads\///')
+        aws s3 cp new.bench s3://switch-benchs/${BRANCH_NAME}/baseline.bench --region us-east-1
+
+    - name: Upload HTML reports
+      run: |
+        BRANCH_NAME=$(echo ${{ github.ref }} | sed 's/refs\/heads\///')
+        aws s3 sync target/criterion s3://switch-benchs/${BRANCH_NAME}/reports --region us-east-1 --acl public-read
