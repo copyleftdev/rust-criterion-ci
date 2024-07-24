@@ -39,7 +39,7 @@ jobs:
       run: cargo test --verbose
 
     - name: Run benchmarks
-      run: cargo bench -- --bench
+      run: cargo bench
 
     - name: Generate unique identifier
       id: identifier
