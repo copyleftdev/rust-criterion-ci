@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  setup:
+  benchmark:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,38 +20,17 @@ jobs:
         profile: minimal
         override: true
 
-  build:
-    runs-on: ubuntu-latest
-    needs: setup
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-
-    - name: Set up Rust
-      uses: actions-rs/toolchain@v1
+    - name: Cache dependencies
+      uses: actions/cache@v2
       with:
-        toolchain: stable
-        profile: minimal
-        override: true
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Build project
       run: cargo build --release
-
-  benchmark:
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-
-    - name: Set up Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        profile: minimal
-        override: true
 
     - name: Run benchmarks
       run: cargo bench --bench semaphore_benchmark -- --save-baseline new
@@ -59,20 +38,17 @@ jobs:
     - name: List Benchmark Directory
       run: ls -al target/criterion/semaphore_benchmark
 
-  upload:
-    runs-on: ubuntu-latest
-    needs: benchmark
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-
-    - name: Set up Rust
-      uses: actions-rs/toolchain@v1
+    - name: Upload benchmark results to GitHub Actions artifacts
+      uses: actions/upload-artifact@v2
       with:
-        toolchain: stable
-        profile: minimal
-        override: true
+        name: benchmark-results
+        path: target/criterion/semaphore_benchmark/new
+
+    - name: Install AWS CLI
+      run: |
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip
+        sudo ./aws/install
 
     - name: Upload benchmark results to S3
       env:
@@ -80,4 +56,4 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       run: |
         BRANCH_NAME=$(echo ${GITHUB_REF} | sed 's/refs\/heads\///')
-        aws s3 cp target/criterion/semaphore_benchmark/new s3://switch-benchs/${BRANCH_NAME}/baseline.bench --region ***
+        aws s3 cp target/criterion/semaphore_benchmark/new s3://switch-benchs/${BRANCH_NAME}/baseline.bench --region us-east-1
