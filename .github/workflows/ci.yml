@@ -35,7 +35,7 @@ jobs:
         profile: minimal
         override: true
 
-    - name: Install dependencies
+    - name: Build project
       run: cargo build --release
 
   benchmark:
@@ -54,7 +54,7 @@ jobs:
         override: true
 
     - name: Run benchmarks
-      run: cargo bench -- --save-baseline new
+      run: cargo bench --bench semaphore_benchmark -- --save-baseline new
 
     - name: List Benchmark Directory
       run: ls -al target/criterion/semaphore_benchmark
