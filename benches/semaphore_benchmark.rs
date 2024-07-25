@@ -2,7 +2,6 @@ use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId};
 use criterion::async_executor::FuturesExecutor;
 use rust_semaphore::MySemaphore;
 use std::time::Duration;
-use tokio::runtime::Runtime;
 
 async fn acquire_semaphore(semaphore: &MySemaphore) {
     let _permit = semaphore.acquire().await.unwrap();
@@ -15,8 +14,7 @@ fn semaphore_benchmark(c: &mut Criterion) {
     group
         .measurement_time(Duration::new(5, 0))
         .sample_size(10)
-        .warm_up_time(Duration::new(3, 0))
-        .save_baseline("new"); // Save the baseline
+        .warm_up_time(Duration::new(3, 0));
 
     group.bench_function(BenchmarkId::new("semaphore acquire", 10), |b| {
         b.to_async(FuturesExecutor).iter(|| acquire_semaphore(&semaphore));
@@ -25,5 +23,9 @@ fn semaphore_benchmark(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, semaphore_benchmark);
+criterion_group! {
+    name = benches;
+    config = Criterion::default().save_baseline("new".to_string());
+    targets = semaphore_benchmark
+}
 criterion_main!(benches);
