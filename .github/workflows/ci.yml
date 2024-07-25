@@ -63,4 +63,4 @@ jobs:
           echo "Benchmark results directory not found"
           exit 1
         fi
-        aws s3 cp $BENCHMARK_DIR s3://switch-benchs/${BRANCH_NAME}/baseline.bench --recursive --region us-east-1
+        aws s3 cp $BENCHMARK_DIR s3://switch-benchs/${BRANCH_NAME}/baseline.bench/ --recursive --region us-east-1
