@@ -1,4 +1,4 @@
-name: Benchmark
+ame: Benchmark
 
 on:
   push:
@@ -52,6 +52,12 @@ jobs:
         path: target/criterion
         if-no-files-found: warn
 
+    - name: Debug - Show benchmark directory
+      run: |
+        BENCHMARK_DIR=$(find target/criterion -name "new" -type d | head -n 1)
+        echo "BENCHMARK_DIR: $BENCHMARK_DIR"
+        ls -la $BENCHMARK_DIR
+
     - name: Upload benchmark results to S3
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -63,4 +69,12 @@ jobs:
           echo "Benchmark results directory not found"
           exit 1
         fi
+        echo "Uploading contents of $BENCHMARK_DIR to S3"
         aws s3 cp $BENCHMARK_DIR s3://switch-benchs/${BRANCH_NAME}/baseline.bench/ --recursive --region us-east-1
+        if [ $? -eq 0 ]; then
+          echo "Upload to S3 successful"
+        else
+          echo "Upload to S3 failed"
+          aws s3 ls s3://switch-benchs/
+          exit 1
+        fi
